@@ -5,222 +5,10 @@
     <div v-if="loading" class="loading">
       ローディング中: {{ loadingProgress }}%
     </div>
-  </div>
-</template>
-
-<script>
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-
-export default {
-  name: 'App',
-  data() {
-    return {
-      loading: true,
-      loadingProgress: 0,
-      sound: null, // 音声データ用
-    };
-  },
-  mounted() {
-    this.initThreeJS();
-  },
-  methods: {
-    initThreeJS() {
-      // シーンの作成
-      const scene = new THREE.Scene();
-
-      // カメラの設定
-      const camera = new THREE.PerspectiveCamera(
-        75,
-        window.innerWidth / window.innerHeight,
-        0.1,
-        1000
-      );
-      camera.position.set(0, 0, 20); // カメラの初期位置
-
-      // レンダラーの設定
-      const renderer = new THREE.WebGLRenderer({
-        canvas: this.$refs.threeCanvas,
-        antialias: true,
-      });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(window.devicePixelRatio);
-
-      // コントロールの設定
-      const controls = new OrbitControls(camera, renderer.domElement);
-      controls.enableDamping = true;
-      controls.dampingFactor = 0.05;
-
-      // ライティングの追加
-      const ambientLight = new THREE.AmbientLight(0xffffff, 2); // 明るくする
-      scene.add(ambientLight);
-
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 2); // 強めの光
-      directionalLight.position.set(5, 5, 5);
-      scene.add(directionalLight);
-
-      // 星空の追加
-      const starGeometry = new THREE.BufferGeometry();
-      const starMaterial = new THREE.PointsMaterial({ color: 0xffffff });
-      const starVertices = [];
-      for (let i = 0; i < 10000; i++) {
-        const x = (Math.random() - 0.5) * 2000;
-        const y = (Math.random() - 0.5) * 2000;
-        const z = (Math.random() - 0.5) * 2000;
-        starVertices.push(x, y, z);
-      }
-      starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
-      const stars = new THREE.Points(starGeometry, starMaterial);
-      scene.add(stars); // 星空をシーンに追加
-
-      // 音声のループ再生設定
-      const listener = new THREE.AudioListener();
-      camera.add(listener);
-
-      const sound = new THREE.Audio(listener);
-      const audioLoader = new THREE.AudioLoader();
-      audioLoader.load('/path_to_audio_file.mp3', (buffer) => {
-        sound.setBuffer(buffer);
-        sound.setLoop(true);
-        sound.setVolume(0.5); // 音量を50%に設定
-        sound.play(); // 音声再生開始
-      });
-      this.sound = sound;
-
-      // トーラス（ドーナツ）の作成
-      const torusGeometry = new THREE.TorusGeometry(2.5, 0.75, 16, 100);
-      const torusMaterial = new THREE.MeshStandardMaterial({
-        color: 0x1E90FF, // 神秘的な青色
-        metalness: 0.8,  // 金属感
-        roughness: 0.3,  // 表面の粗さ
-      });
-      const torus = new THREE.Mesh(torusGeometry, torusMaterial);
-      scene.add(torus);
-
-      // GLTFLoaderのインスタンス作成
-      const loader = new GLTFLoader();
-
-      // Cactus1モデルのロード
-      const cactusModelUrl = '/models/Cactus1.gltf';
-      loader.load(
-        cactusModelUrl,
-        (gltf) => {
-          const cactusModel = gltf.scene;
-          scene.add(cactusModel);
-
-          // モデルのスケール調整
-          const box = new THREE.Box3().setFromObject(cactusModel);
-          const maxDim = Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
-          cactusModel.scale.setScalar(1.25 / maxDim);
-
-          // モデルをシーン内の適切な位置に配置
-          cactusModel.position.set(-10, 0, 0); // 左側に配置
-        },
-        (xhr) => {
-          this.loadingProgress = Math.round((xhr.loaded / xhr.total) * 100);
-        },
-        (error) => {
-          console.error('Cactus1モデルの読み込み中にエラーが発生しました', error);
-        }
-      );
-
-      // Origami Craneモデルのロード（鶴）
-      const craneModelUrl = '/models/scene.gltf'; // 鶴モデルの相対パス
-      loader.load(
-        craneModelUrl,
-        (gltf) => {
-          const craneModel = gltf.scene;
-          scene.add(craneModel);
-
-          // モデルのスケール調整
-          const box = new THREE.Box3().setFromObject(craneModel);
-          const maxDim = Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
-          craneModel.scale.setScalar(20.5 / maxDim);
-
-          // モデルを右側に配置
-          craneModel.position.set(10, 0, 0);
-
-          // ダブルクリックでテキスト読み上げ
-          craneModel.traverse((child) => {
-            if (child.isMesh) {
-              child.material.color.set(0xff0000); // 鶴を赤にする
-            }
-          });
-
-          craneModel.addEventListener('dblclick', () => {
-            const text = "鶴のモデルがダブルクリックされました。";
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'ja-JP';
-            window.speechSynthesis.speak(utterance);
-          });
-        },
-        (xhr) => {
-          this.loadingProgress = Math.round((xhr.loaded / xhr.total) * 100);
-        },
-        (error) => {
-          console.error('Crane_Origamiモデルの読み込み中にエラーが発生しました', error);
-        }
-      );
-
-      // アニメーションループの定義
-      const animate = () => {
-        requestAnimationFrame(animate);
-
-        // トーラスを回転させる
-        torus.rotation.x += 0.005;
-        torus.rotation.y += 0.01;
-
-        controls.update(); // コントロールの更新
-        renderer.render(scene, camera);
-      };
-      animate();
-
-      // ウィンドウリサイズ時の対応
-      window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-      });
-    },
-  },
-};
-</script>
-
-<style>
-body, html {
-  margin: 0;
-  overflow: hidden;
-  height: 100%;
-}
-
-canvas {
-  display: block;
-}
-
-.loading {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  color: white;
-  font-family: Arial, sans-serif;
-  background: rgba(0, 0, 0, 0.5);
-  padding: 5px 10px;
-  border-radius: 5px;
-}
-</style>
-
-
-
-
-
-<template>
-  <div id="app">
-    <canvas ref="threeCanvas"></canvas>
-    <!-- ローディングインジケーター -->
-    <div v-if="loading" class="loading">
-      ローディング中: {{ loadingProgress }}%
-    </div>
+    <!-- 可愛いボタン -->
+    <button class="cute-button" @click="onButtonClick">
+      にゃー 推して(ボタン)
+    </button>
   </div>
 </template>
 
@@ -237,6 +25,15 @@ export default {
       loading: true,
       loadingProgress: 0,
       sound: null, // 音声データ用
+      // 追加のデータプロパティ
+      speechBubble: null,
+      isRotating: false,
+      rotationProgress: 0,
+      rotationSpeed: 0.02, // ラジアン毎フレーム
+      scene: null,
+      camera: null,
+      renderer: null,
+      sceneModel: null,
     };
   },
   mounted() {
@@ -246,6 +43,7 @@ export default {
     initThreeJS() {
       // シーンの作成
       const scene = new THREE.Scene();
+      this.scene = scene;
 
       // 背景色をよりピンク色に設定
       scene.background = new THREE.Color(0xffd1dc); // #ffd1dc は淡いピンク色
@@ -258,6 +56,7 @@ export default {
         1000
       );
       camera.position.set(0, 0, 20); // カメラの初期位置
+      this.camera = camera;
 
       // レンダラーの設定
       const renderer = new THREE.WebGLRenderer({
@@ -266,6 +65,7 @@ export default {
       });
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(window.devicePixelRatio);
+      this.renderer = renderer;
 
       // コントロールの設定
       const controls = new OrbitControls(camera, renderer.domElement);
@@ -313,16 +113,6 @@ export default {
       });
       this.sound = sound;
 
-      // トーラス（ドーナツ）の作成
-      const torusGeometry = new THREE.TorusGeometry(2.5, 0.75, 16, 100);
-      const torusMaterial = new THREE.MeshStandardMaterial({
-        color: 0x1E90FF, // 神秘的な青色
-        metalness: 0.8,  // 金属感
-        roughness: 0.3,  // 表面の粗さ
-      });
-      const torus = new THREE.Mesh(torusGeometry, torusMaterial);
-      scene.add(torus);
-
       // GLTFLoaderのインスタンス作成
       const loader = new GLTFLoader();
 
@@ -336,6 +126,7 @@ export default {
         (gltf) => {
           const sceneModel = gltf.scene;
           scene.add(sceneModel);
+          this.sceneModel = sceneModel; // モデルを保存
 
           // モデルのスケール調整
           const box = new THREE.Box3().setFromObject(sceneModel);
@@ -344,13 +135,16 @@ export default {
             box.getSize(new THREE.Vector3()).y,
             box.getSize(new THREE.Vector3()).z
           );
-          sceneModel.scale.setScalar(20.5 / maxDim);
+          sceneModel.scale.setScalar(10.5 / maxDim);
 
           // モデルをシーン内の適切な位置に配置（必要に応じて調整）
-          sceneModel.position.set(0, 0, 0); // 中央に配置
+          sceneModel.position.set(0, -5, 0); // 中央に配置
 
           // インタラクティブモデルとして追加
           interactiveModels.push(sceneModel);
+
+          // ローディング完了
+          this.loading = false;
         },
         (xhr) => {
           if (xhr.lengthComputable) {
@@ -359,6 +153,7 @@ export default {
         },
         (error) => {
           console.error('scene.glbモデルの読み込み中にエラーが発生しました', error);
+          this.loading = false;
         }
       );
 
@@ -389,7 +184,7 @@ export default {
 
         if (intersects.length > 0) {
           // 最も近いオブジェクトを選択
-          selectedObject = intersects[0].object.parent; // 親オブジェクトを取得
+          selectedObject = intersects[0].object.parent; //親オブジェクトを取得
 
           // TransformControlsに選択されたオブジェクトをアタッチ
           transformControls.attach(selectedObject);
@@ -410,9 +205,16 @@ export default {
       const animate = () => {
         requestAnimationFrame(animate);
 
-        // トーラスを回転させる
-        torus.rotation.x += 0.005;
-        torus.rotation.y += 0.01;
+        // 回転処理
+        if (this.isRotating && this.sceneModel) {
+          const delta = this.rotationSpeed;
+          this.sceneModel.rotation.y += delta;
+          this.rotationProgress += delta;
+          if (this.rotationProgress >= Math.PI * 2) {
+            this.isRotating = false;
+            this.rotationProgress = 0;
+          }
+        }
 
         controls.update(); // コントロールの更新
         transformControls.update(); // TransformControlsの更新
@@ -427,7 +229,94 @@ export default {
         renderer.setSize(window.innerWidth, window.innerHeight);
       });
     },
+    // ボタン押下時のハンドラー
+    onButtonClick() {
+      this.showSpeechBubble("こんにちは！");
+      this.startRotation();
+    },
+    // 吹き出しを表示するメソッド
+    showSpeechBubble(message) {
+      if (this.speechBubble) return; // 既に吹き出しが表示されている場合は無視
+
+      // テキストを描画するためのCanvasを作成
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      const fontSize = 64;
+      context.font = `Bold ${fontSize}px Arial`;
+      context.fillStyle = 'white';
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+
+      // テキストの幅と高さを取得
+      const textMetrics = context.measureText(message);
+      const textWidth = textMetrics.width;
+      const textHeight = fontSize; // 簡易的にフォントサイズを高さとする
+
+      // Canvasのサイズをテキストに合わせて設定
+      canvas.width = textWidth + 40; // パディングを追加
+      canvas.height = textHeight + 40;
+
+      // 再度フォントを設定（サイズ変更に伴うクリア）
+      context.font = `Bold ${fontSize}px Arial`;
+      context.fillStyle = 'white';
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+
+      // 吹き出しの背景を描画
+      context.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      context.roundRect(20, 20, textWidth, textHeight, 20); // カスタムメソッドが必要
+      context.fillStyle = 'white';
+      context.fillText(message, canvas.width / 2, canvas.height / 2);
+
+      // CanvasTextureを作成
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.needsUpdate = true;
+
+      // SpriteMaterialを作成
+      const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+      const sprite = new THREE.Sprite(spriteMaterial);
+
+      // 吹き出しのサイズを調整
+      const maxWidth = 10; // シーン内での最大幅
+      const scaleFactor = maxWidth / canvas.width;
+      sprite.scale.set(canvas.width * scaleFactor, canvas.height * scaleFactor, 1);
+
+      // 吹き出しをモデルの上に配置
+      sprite.position.set(0, 10, 0); // 必要に応じて調整
+
+      // 吹き出しをシーンに追加
+      this.scene.add(sprite);
+      this.speechBubble = sprite;
+
+      // 5秒後に吹き出しを削除
+      setTimeout(() => {
+        if (this.speechBubble) {
+          this.scene.remove(this.speechBubble);
+          this.speechBubble = null;
+        }
+      }, 5000);
+    },
+    // モデルを回転させるメソッド
+    startRotation() {
+      if (this.isRotating) return; // 既に回転中の場合は無視
+      this.isRotating = true;
+      this.rotationProgress = 0;
+    },
   },
+};
+
+// Canvasのコンテキストに角丸矩形を描画するための拡張
+CanvasRenderingContext2D.prototype.roundRect = function (x, y, width, height, radius) {
+  if (width < 2 * radius) radius = width / 2;
+  if (height < 2 * radius) radius = height / 2;
+  this.beginPath();
+  this.moveTo(x + radius, y);
+  this.arcTo(x + width, y, x + width, y + height, radius);
+  this.arcTo(x + width, y + height, x, y + height, radius);
+  this.arcTo(x, y + height, x, y, radius);
+  this.arcTo(x, y, x + width, y, radius);
+  this.closePath();
+  return this;
 };
 </script>
 
@@ -435,6 +324,12 @@ export default {
 body, html {
   margin: 0;
   overflow: hidden;
+  height: 100%;
+}
+
+#app {
+  position: relative;
+  width: 100%;
   height: 100%;
 }
 
@@ -451,5 +346,36 @@ canvas {
   background: rgba(0, 0, 0, 0.5);
   padding: 5px 10px;
   border-radius: 5px;
+}
+
+/* 可愛いボタンのスタイル */
+.cute-button {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+ background-color: #00bfff; 
+  border: none;
+  color: white;
+  padding: 15px 30px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 20px;
+  font-family: 'Comic Sans MS', cursive, sans-serif;
+  border-radius: 50px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.cute-button:hover {
+  transform: translateX(-50%) scale(1.1);
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.4);
+}
+
+.cute-button:active {
+  transform: translateX(-50%) scale(0.95);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 </style>
