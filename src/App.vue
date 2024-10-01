@@ -25,7 +25,6 @@ export default {
       loading: true,
       loadingProgress: 0,
       sound: null, // 音声データ用
-      // 追加のデータプロパティ
       speechBubble: null,
       isRotating: false,
       rotationProgress: 0,
@@ -34,6 +33,14 @@ export default {
       camera: null,
       renderer: null,
       sceneModel: null,
+      // メッセージの配列を追加
+      messages: [
+        "こんにちはー！",
+        "元気でた？",
+        "今お天気？",
+        "ありがとう。",
+        "ファイト"
+      ],
     };
   },
   mounted() {
@@ -152,7 +159,7 @@ export default {
           }
         },
         (error) => {
-          console.error('scene.glbモデルの読み込み中にエラーが発生しました', error);
+          console.error('モデルの読み込み中にエラーが発生しました', error);
           this.loading = false;
         }
       );
@@ -231,7 +238,11 @@ export default {
     },
     // ボタン押下時のハンドラー
     onButtonClick() {
-      this.showSpeechBubble("こんにちは！");
+      // ランダムなインデックスを取得
+      const randomIndex = Math.floor(Math.random() * this.messages.length);
+      const randomMessage = this.messages[randomIndex];
+      // ランダムなメッセージを表示
+      this.showSpeechBubble(randomMessage);
       this.startRotation();
     },
     // 吹き出しを表示するメソッド
@@ -243,7 +254,6 @@ export default {
       const context = canvas.getContext('2d');
       const fontSize = 64;
       context.font = `Bold ${fontSize}px Arial`;
-      context.fillStyle = 'white';
       context.textAlign = 'center';
       context.textBaseline = 'middle';
 
@@ -258,14 +268,18 @@ export default {
 
       // 再度フォントを設定（サイズ変更に伴うクリア）
       context.font = `Bold ${fontSize}px Arial`;
-      context.fillStyle = 'white';
       context.textAlign = 'center';
       context.textBaseline = 'middle';
 
-      // 吹き出しの背景を描画
-      context.fillStyle = 'rgba(0, 0, 0, 0.7)';
-      context.roundRect(20, 20, textWidth, textHeight, 20); // カスタムメソッドが必要
-      context.fillStyle = 'white';
+      // テキストの色を青に設定（ボタンと同じ色）
+      context.fillStyle = '#00bfff';
+
+      // 背景の描画を削除またはコメントアウト
+      // context.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      // context.roundRect(20, 20, textWidth, textHeight, 20);
+      // context.fill();
+
+      // テキストを描画
       context.fillText(message, canvas.width / 2, canvas.height / 2);
 
       // CanvasTextureを作成
@@ -305,7 +319,7 @@ export default {
   },
 };
 
-// Canvasのコンテキストに角丸矩形を描画するための拡張
+// Canvasのコンテキストに角丸矩形を描画するための拡張（必要であれば残す）
 CanvasRenderingContext2D.prototype.roundRect = function (x, y, width, height, radius) {
   if (width < 2 * radius) radius = width / 2;
   if (height < 2 * radius) radius = height / 2;
@@ -351,9 +365,9 @@ canvas {
 /* 可愛いボタンのスタイル */
 .cute-button {
   position: absolute;
-  bottom: 30px;
+  top: 80%; /* ボタンの位置を画面の70%の高さに設定 */
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%); /* ボタンを中央に配置 */
   background-color: #00bfff;
   border: none;
   color: white;
@@ -370,12 +384,12 @@ canvas {
 }
 
 .cute-button:hover {
-  transform: translateX(-50%) scale(1.1);
+  transform: translate(-50%, -50%) scale(1.1);
   box-shadow: 0 6px 10px rgba(0, 0, 0, 0.4);
 }
 
 .cute-button:active {
-  transform: translateX(-50%) scale(0.95);
+  transform: translate(-50%, -50%) scale(0.95);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 </style>
